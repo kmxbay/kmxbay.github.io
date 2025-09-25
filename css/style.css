@@ -1,0 +1,22 @@
+/* css/styles.css */
+
+/* --- Definición de Fuentes Personalizadas --- */
+@font-face {
+    font-family: 'Fraktur';
+    src: url('/fonts/fraktur-regular.woff2') format('woff2');
+    font-weight: normal; /* O 400 */
+    font-style: normal;
+}
+@font-face {
+    font-family: 'Century Gothic';
+    src: url('../fonts/century-gothic.woff') format('woff');
+    font-weight: normal; /* O 400 */
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Century Gothic';
+    src: url('../fonts/century-gothic-bold.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+}

